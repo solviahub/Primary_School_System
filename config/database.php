@@ -23,26 +23,30 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Site configuration
 define('SITE_NAME', 'School Management System');
-define('SITE_URL', 'http://localhost:8080/school-management-system/');
+define('SITE_URL', 'http://localhost/school-management-system/');
 
 // Function to check if user is logged in
-function isLoggedIn() {
+function isLoggedIn()
+{
     return isset($_SESSION['user_id']);
 }
 
 // Function to check user role
-function hasRole($role) {
+function hasRole($role)
+{
     return isset($_SESSION['user_role']) && $_SESSION['user_role'] === $role;
 }
 
 // Function to redirect
-function redirect($url) {
+function redirect($url)
+{
     header("Location: " . SITE_URL . $url);
     exit();
 }
 
 // Function to display messages
-function displayMessage() {
+function displayMessage()
+{
     if (isset($_SESSION['message'])) {
         $message = $_SESSION['message'];
         $type = $_SESSION['message_type'] ?? 'info';
@@ -57,13 +61,15 @@ function displayMessage() {
 }
 
 // Function to sanitize input
-function sanitize($data) {
+function sanitize($data)
+{
     global $conn;
     return mysqli_real_escape_string($conn, htmlspecialchars(trim($data)));
 }
 
 // Function to get user details
-function getUserDetails($user_id) {
+function getUserDetails($user_id)
+{
     global $conn;
     $query = "SELECT * FROM users WHERE id = $user_id";
     $result = mysqli_query($conn, $query);
@@ -71,13 +77,13 @@ function getUserDetails($user_id) {
 }
 
 // Function to check permissions
-function checkPermission($allowed_roles) {
+function checkPermission($allowed_roles)
+{
     if (!isLoggedIn()) {
         redirect('login.php');
     }
-    
+
     if (!in_array($_SESSION['user_role'], $allowed_roles)) {
         redirect('index.php');
     }
 }
-?>
