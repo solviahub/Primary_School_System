@@ -59,8 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
           mysqli_query($conn, $query2);
         }
 
-        // Send login credentials to user via email (optional)
-        // mail($email, "Your School Management System Login Credentials", "Username: $username\nPassword: {$_POST['password']}\nLogin at: " . SITE_URL);
+        // If role is parent and a child is selected, link the parent to the child
+        if ($role == 'parent' && !empty($_POST['child_id'])) {
+          $child_id = (int)$_POST['child_id'];
+          $update_query = "UPDATE students SET parent_id = $user_id WHERE id = $child_id";
+          mysqli_query($conn, $update_query);
+        }
 
         $_SESSION['message'] = "User created successfully! Username: $username, Password: {$_POST['password']}";
         $_SESSION['message_type'] = 'success';
@@ -108,15 +112,46 @@ $classes = mysqli_query($conn, "SELECT * FROM classes WHERE status = 'active'");
 // Get parents for dropdown
 $parents = mysqli_query($conn, "SELECT id, full_name, email FROM users WHERE role = 'parent' AND status = 'active'");
 
+// Get unlinked students for parent linking
+$unlinked_students = mysqli_query($conn, "SELECT s.id, s.admission_number, u.full_name 
+                                         FROM students s 
+                                         JOIN users u ON s.user_id = u.id 
+                                         WHERE s.parent_id IS NULL");
+
 include '../includes/header.php';
 ?>
 
+<style>
+  .stat-card {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-card .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+
+  .stat-card .stat-title {
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+
+  .stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+</style>
+
 <div class="row mb-3">
   <div class="col-md-12">
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+    <button type="button" class="btn" style="background-color: #3b82f6; color: white;" data-bs-toggle="modal" data-bs-target="#addUserModal">
       <i class="fas fa-plus me-2"></i>Add New User
     </button>
-    <button type="button" class="btn btn-info" onclick="window.print()">
+    <button type="button" class="btn btn-outline-secondary ms-2" onclick="window.print()">
       <i class="fas fa-print me-2"></i>Print User List
     </button>
   </div>
@@ -174,14 +209,14 @@ include '../includes/header.php';
   </div>
 </div>
 
-<div class="card">
-  <div class="card-header">
-    <h6 class="mb-0"><i class="fas fa-users me-2"></i>All Users</h6>
+<div class="card shadow-sm">
+  <div class="card-header bg-white">
+    <h6 class="mb-0 fw-bold" style="color: #3b82f6;"><i class="fas fa-users me-2"></i>All Users</h6>
   </div>
-  <div class="card-body">
+  <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover datatable">
-        <thead>
+      <table class="table table-hover datatable mb-0">
+        <thead style="background-color: #3b82f6; color: white;">
           <tr>
             <th>ID</th>
             <th>Username</th>
@@ -225,7 +260,8 @@ include '../includes/header.php';
                 </span>
               </td>
               <td>
-                <button class="btn btn-sm btn-info edit-user" data-id="<?php echo $user['id']; ?>"
+                <button class="btn btn-sm btn-outline-primary edit-user"
+                  data-id="<?php echo $user['id']; ?>"
                   data-username="<?php echo htmlspecialchars($user['username']); ?>"
                   data-email="<?php echo htmlspecialchars($user['email']); ?>"
                   data-fullname="<?php echo htmlspecialchars($user['full_name']); ?>"
@@ -235,13 +271,10 @@ include '../includes/header.php';
                   <i class="fas fa-edit"></i>
                 </button>
                 <?php if ($user['role'] != 'admin'): ?>
-                  <a href="?delete=<?php echo $user['id']; ?>" class="btn btn-sm btn-danger delete-confirm">
+                  <a href="?delete=<?php echo $user['id']; ?>" class="btn btn-sm btn-outline-danger delete-confirm">
                     <i class="fas fa-trash"></i>
                   </a>
                 <?php endif; ?>
-                <button class="btn btn-sm btn-secondary" onclick="showCredentials('<?php echo $user['username']; ?>', '<?php echo $user['email']; ?>')">
-                  <i class="fas fa-key"></i>
-                </button>
               </td>
             </tr>
           <?php endwhile; ?>
@@ -256,7 +289,7 @@ include '../includes/header.php';
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form method="POST" action="">
-        <div class="modal-header bg-primary text-white">
+        <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white;">
           <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add New User</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -270,25 +303,25 @@ include '../includes/header.php';
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="form-label">Full Name *</label>
+              <label class="form-label fw-semibold">Full Name *</label>
               <input type="text" class="form-control" name="full_name" required>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Username *</label>
+              <label class="form-label fw-semibold">Username *</label>
               <input type="text" class="form-control" name="username" required>
               <small class="text-muted">Unique username for login</small>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Email *</label>
+              <label class="form-label fw-semibold">Email *</label>
               <input type="email" class="form-control" name="email" required>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Password *</label>
+              <label class="form-label fw-semibold">Password *</label>
               <input type="text" class="form-control" name="password" value="password123" required>
               <small class="text-muted">Default: password123 (User should change after login)</small>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Role *</label>
+              <label class="form-label fw-semibold">Role *</label>
               <select class="form-select" name="role" id="roleSelect" required>
                 <option value="">Select Role</option>
                 <option value="admin">Administrator</option>
@@ -299,11 +332,11 @@ include '../includes/header.php';
               </select>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">Phone</label>
+              <label class="form-label fw-semibold">Phone</label>
               <input type="text" class="form-control" name="phone">
             </div>
             <div class="col-md-12 mb-3">
-              <label class="form-label">Address</label>
+              <label class="form-label fw-semibold">Address</label>
               <textarea class="form-control" name="address" rows="2"></textarea>
             </div>
 
@@ -311,7 +344,7 @@ include '../includes/header.php';
             <div id="studentFields" style="display: none;" class="row">
               <div class="col-md-12">
                 <hr>
-                <h6 class="mb-3">Student Information</h6>
+                <h6 class="fw-bold mb-3" style="color: #3b82f6;">Student Information</h6>
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Class *</label>
@@ -326,7 +359,10 @@ include '../includes/header.php';
                 <label class="form-label">Parent/Guardian</label>
                 <select class="form-select" name="parent_id">
                   <option value="">Select Parent</option>
-                  <?php while ($parent = mysqli_fetch_assoc($parents)): ?>
+                  <?php
+                  $parents_list = mysqli_query($conn, "SELECT id, full_name, email FROM users WHERE role = 'parent' AND status = 'active'");
+                  while ($parent = mysqli_fetch_assoc($parents_list)):
+                  ?>
                     <option value="<?php echo $parent['id']; ?>"><?php echo $parent['full_name']; ?> (<?php echo $parent['email']; ?>)</option>
                   <?php endwhile; ?>
                 </select>
@@ -346,53 +382,42 @@ include '../includes/header.php';
               </div>
             </div>
 
-            <!-- Teacher Specific Fields -->
-            <div id="teacherFields" style="display: none;" class="row">
-              <div class="col-md-12">
-                <hr>
-                <h6 class="mb-3">Teacher Information</h6>
-              </div>
-              <div class="col-md-12 mb-3">
-                <label class="form-label">Qualification</label>
-                <input type="text" class="form-control" name="qualification" placeholder="e.g., B.Ed, M.Sc">
-              </div>
-              <div class="col-md-12 mb-3">
-                <label class="form-label">Specialization</label>
-                <input type="text" class="form-control" name="specialization" placeholder="e.g., Mathematics, Science">
-              </div>
-            </div>
-
-            <!-- Parent Specific Fields -->
+            <!-- Parent Specific Fields - FIXED: Now properly links children -->
             <div id="parentFields" style="display: none;" class="row">
               <div class="col-md-12">
                 <hr>
-                <h6 class="mb-3">Parent Information</h6>
+                <h6 class="fw-bold mb-3" style="color: #3b82f6;">Parent Information</h6>
               </div>
               <div class="col-md-12 mb-3">
                 <label class="form-label">Occupation</label>
-                <input type="text" class="form-control" name="occupation">
+                <input type="text" class="form-control" name="occupation" placeholder="e.g., Doctor, Engineer, Business">
               </div>
               <div class="col-md-12 mb-3">
-                <label class="form-label">Children (Will link after creation)</label>
+                <label class="form-label fw-semibold">Link to Child (Select a student)</label>
                 <select class="form-select" name="child_id">
-                  <option value="">Select Child to Link</option>
+                  <option value="">-- Select Child to Link --</option>
                   <?php
-                  $unlinked_students = mysqli_query($conn, "SELECT s.id, s.admission_number, u.full_name 
-                                                                             FROM students s 
-                                                                             JOIN users u ON s.user_id = u.id 
-                                                                             WHERE s.parent_id IS NULL");
-                  while ($student = mysqli_fetch_assoc($unlinked_students)):
+                  // Reset the pointer and get unlinked students
+                  $unlinked_query = "SELECT s.id, s.admission_number, u.full_name 
+                                                      FROM students s 
+                                                      JOIN users u ON s.user_id = u.id 
+                                                      WHERE s.parent_id IS NULL";
+                  $unlinked_result = mysqli_query($conn, $unlinked_query);
+                  while ($student = mysqli_fetch_assoc($unlinked_result)):
                   ?>
-                    <option value="<?php echo $student['id']; ?>"><?php echo $student['full_name'] . ' (' . $student['admission_number'] . ')'; ?></option>
+                    <option value="<?php echo $student['id']; ?>">
+                      <?php echo $student['full_name'] . ' (' . $student['admission_number'] . ')'; ?>
+                    </option>
                   <?php endwhile; ?>
                 </select>
+                <small class="text-muted">This will link the child to this parent account</small>
               </div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create User</button>
+          <button type="submit" class="btn" style="background-color: #3b82f6; color: white;">Create User</button>
         </div>
       </form>
     </div>
@@ -404,27 +429,27 @@ include '../includes/header.php';
   <div class="modal-dialog">
     <div class="modal-content">
       <form method="POST" action="">
-        <div class="modal-header">
+        <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white;">
           <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit User</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" name="action" value="edit">
           <input type="hidden" name="user_id" id="edit_user_id">
           <div class="mb-3">
-            <label class="form-label">Username</label>
+            <label class="form-label fw-semibold">Username</label>
             <input type="text" class="form-control" name="username" id="edit_username" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Full Name</label>
+            <label class="form-label fw-semibold">Full Name</label>
             <input type="text" class="form-control" name="full_name" id="edit_fullname" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Email</label>
+            <label class="form-label fw-semibold">Email</label>
             <input type="email" class="form-control" name="email" id="edit_email" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Role</label>
+            <label class="form-label fw-semibold">Role</label>
             <select class="form-select" name="role" id="edit_role" required>
               <option value="admin">Administrator</option>
               <option value="teacher">Teacher</option>
@@ -434,55 +459,19 @@ include '../includes/header.php';
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Phone</label>
+            <label class="form-label fw-semibold">Phone</label>
             <input type="text" class="form-control" name="phone" id="edit_phone">
           </div>
           <div class="mb-3">
-            <label class="form-label">Address</label>
+            <label class="form-label fw-semibold">Address</label>
             <textarea class="form-control" name="address" id="edit_address" rows="2"></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Update User</button>
+          <button type="submit" class="btn" style="background-color: #3b82f6; color: white;">Update User</button>
         </div>
       </form>
-    </div>
-  </div>
-</div>
-
-<!-- Credentials Modal -->
-<div class="modal fade" id="credentialsModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-success text-white">
-        <h5 class="modal-title"><i class="fas fa-key me-2"></i>User Login Credentials</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-info">
-          <i class="fas fa-info-circle me-2"></i>
-          Share these credentials with the user. They can use them to login to the system.
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <p><strong>Login URL:</strong> <code><?php echo SITE_URL; ?>login.php</code></p>
-            <p><strong>Username:</strong> <code id="cred_username"></code></p>
-            <p><strong>Password:</strong> <code id="cred_password">password123</code></p>
-            <hr>
-            <p class="text-muted small mb-0">
-              <i class="fas fa-exclamation-triangle me-1"></i>
-              Users should change their password after first login for security.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" onclick="copyCredentials()">
-          <i class="fas fa-copy me-2"></i>Copy Credentials
-        </button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
     </div>
   </div>
 </div>
@@ -491,12 +480,10 @@ include '../includes/header.php';
   // Show/hide fields based on role selection
   document.getElementById('roleSelect').addEventListener('change', function() {
     const studentFields = document.getElementById('studentFields');
-    const teacherFields = document.getElementById('teacherFields');
     const parentFields = document.getElementById('parentFields');
 
     // Hide all first
     studentFields.style.display = 'none';
-    teacherFields.style.display = 'none';
     parentFields.style.display = 'none';
 
     // Show relevant fields
@@ -504,10 +491,6 @@ include '../includes/header.php';
       studentFields.style.display = 'flex';
       studentFields.style.flexWrap = 'wrap';
       studentFields.style.gap = '1rem';
-    } else if (this.value === 'teacher') {
-      teacherFields.style.display = 'flex';
-      teacherFields.style.flexWrap = 'wrap';
-      teacherFields.style.gap = '1rem';
     } else if (this.value === 'parent') {
       parentFields.style.display = 'flex';
       parentFields.style.flexWrap = 'wrap';
@@ -529,47 +512,6 @@ include '../includes/header.php';
       new bootstrap.Modal(document.getElementById('editUserModal')).show();
     });
   });
-
-  // Show credentials
-  let currentUsername = '';
-
-  function showCredentials(username, email) {
-    currentUsername = username;
-    document.getElementById('cred_username').textContent = username;
-    new bootstrap.Modal(document.getElementById('credentialsModal')).show();
-  }
-
-  // Copy credentials
-  function copyCredentials() {
-    const credentials = `Login URL: <?php echo SITE_URL; ?>login.php\nUsername: ${currentUsername}\nPassword: password123`;
-    navigator.clipboard.writeText(credentials);
-    alert('Credentials copied to clipboard!');
-  }
 </script>
-
-<style>
-  .stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-  }
-
-  .stat-card .stat-icon {
-    font-size: 2rem;
-    margin-bottom: 10px;
-  }
-
-  .stat-card .stat-title {
-    font-size: 0.9rem;
-    opacity: 0.9;
-  }
-
-  .stat-card .stat-value {
-    font-size: 2rem;
-    font-weight: bold;
-  }
-</style>
 
 <?php include '../includes/footer.php'; ?>

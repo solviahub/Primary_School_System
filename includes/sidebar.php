@@ -357,6 +357,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link <?php echo $current_page == 'report_cards.php' ? 'active' : ''; ?>" href="<?php echo SITE_URL; ?>admin/report_cards.php">
+                        <i class="fas fa-id-card"></i> Generate Report Cards
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link <?php echo $current_page == 'promote_students.php' ? 'active' : ''; ?>" href="<?php echo SITE_URL; ?>admin/promote_students.php">
                         <i class="fas fa-arrow-up"></i>
                         <span>Promote Students</span>
